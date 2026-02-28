@@ -10,8 +10,9 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Jobs from './pages/Jobs';
+import JobDetails from './pages/JobDetails';
 import EditJob from './pages/EditJob';
-import AdminDashboard from './pages/AdminDashboard';
+import PostJob from './pages/PostJob';
 import MyApplications from './pages/MyApplications';
 import JobApplications from './pages/JobApplications';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
@@ -87,6 +88,12 @@ const App = () => {
                 </PrivateRoute>
               } />
 
+              <Route path="/jobs/:id" element={
+                <PrivateRoute>
+                  <JobDetails />
+                </PrivateRoute>
+              } />
+
               <Route path="/jobs/:id/edit" element={
                 <PrivateRoute>
                   <EditJob />
@@ -123,9 +130,9 @@ const App = () => {
                 </PrivateRoute>
               } />
 
-              <Route path="/admin" element={
+              <Route path="/admin/post-job" element={
                 <PrivateRoute roles={['admin']}>
-                  <AdminDashboard />
+                  <PostJob />
                 </PrivateRoute>
               } />
               

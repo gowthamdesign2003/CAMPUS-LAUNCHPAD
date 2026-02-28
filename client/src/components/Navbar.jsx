@@ -62,7 +62,6 @@ const Navbar = () => {
               
               {user.role === 'admin' && (
                   <>
-                    <NavLink to="/admin" icon={FileText}>Dashboard</NavLink>
                     <NavLink to="/admin/student-status" icon={BarChart}>Status</NavLink>
                   </>
               )}

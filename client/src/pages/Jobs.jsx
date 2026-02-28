@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Briefcase, Building, Calendar, CheckCircle, Edit, Trash2, ArrowRight, Clock, Users } from 'lucide-react';
+import { Briefcase, Building, Calendar, CheckCircle, Edit, Trash2, ArrowRight, Clock, Users, Zap, Search, ChevronDown, X, MapPin } from 'lucide-react';
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -13,6 +13,10 @@ const Jobs = () => {
 
   const [roleFilter, setRoleFilter] = useState('');
   const [packageFilter, setPackageFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
+  const [activeFilter, setActiveFilter] = useState(null); // 'role', 'package', 'date', 'location', 'company' or null
 
   useEffect(() => {
     fetchJobs();
@@ -41,36 +45,6 @@ const Jobs = () => {
       }
   };
 
-  const calculateMatchScore = (job) => {
-      if (!user?.profile) return 0;
-
-      let score = 0;
-      const { skills = [], cgpa = 0, department = '' } = user.profile;
-      const { skills: jobSkills = [], cgpa: jobCgpa = 0, department: jobDepts = [] } = job.eligibilityCriteria || {};
-
-      // 1. Skills Match (60%)
-      if (jobSkills.length > 0) {
-          const matchedSkills = jobSkills.filter(skill => 
-              skills.some(userSkill => userSkill.toLowerCase() === skill.toLowerCase())
-          );
-          score += (matchedSkills.length / jobSkills.length) * 60;
-      } else {
-          score += 60; // No skills required = full match
-      }
-
-      // 2. CGPA Match (20%)
-      if (Number(cgpa) >= Number(jobCgpa)) {
-          score += 20;
-      }
-
-      // 3. Department Match (20%)
-      if (jobDepts.length === 0 || jobDepts.some(d => d.toLowerCase() === department.toLowerCase())) {
-          score += 20;
-      }
-
-      return Math.round(score);
-  };
-
   const isEligible = (job) => {
       if (!user?.profile) return true; // Can't determine, default to true or handle appropriately
       const { cgpa = 0, department = '' } = user.profile;
@@ -83,6 +57,48 @@ const Jobs = () => {
       if (jobDepts.length > 0 && !jobDepts.some(d => d.toLowerCase() === department.toLowerCase())) return false;
 
       return true;
+  };
+
+  const calculateMatchScore = (job) => {
+      if (!user?.profile) return 0;
+
+      // First check strict eligibility
+      const eligible = isEligible(job);
+
+      let score = 0;
+      const { skills = [], cgpa = 0, department = '' } = user.profile;
+      const { skills: jobSkills = [], cgpa: jobCgpa = 0, department: jobDepts = [] } = job.eligibilityCriteria || {};
+
+      // 1. Skills Match (60%)
+      let skillsScore = 0;
+      if (jobSkills.length > 0) {
+          const matchedSkills = jobSkills.filter(skill => 
+              skills.some(userSkill => userSkill.toLowerCase() === skill.toLowerCase())
+          );
+          skillsScore = (matchedSkills.length / jobSkills.length) * 60;
+      } else {
+          skillsScore = 60; // No skills required = full match
+      }
+
+      // 2. CGPA Match (20%)
+      let academicScore = 0;
+      if (Number(cgpa) >= Number(jobCgpa)) {
+          academicScore += 20;
+      }
+
+      // 3. Department Match (20%)
+      if (jobDepts.length === 0 || jobDepts.some(d => d.toLowerCase() === department.toLowerCase())) {
+          academicScore += 20;
+      }
+
+      score = skillsScore + academicScore;
+
+      // If strictly not eligible (failed mandatory criteria), cap score at 40% (Red)
+      if (!eligible) {
+          return Math.min(Math.round(score), 40);
+      }
+
+      return Math.round(score);
   };
 
   const handleApply = async (jobId) => {
@@ -110,12 +126,24 @@ const Jobs = () => {
   // Filter jobs
   const filteredJobs = jobs.filter(job => {
       const matchesRole = roleFilter 
-          ? job.role.toLowerCase().includes(roleFilter.toLowerCase()) 
+          ? job.role.toLowerCase().includes(roleFilter.toLowerCase()) || 
+            job.companyName.toLowerCase().includes(roleFilter.toLowerCase()) ||
+            (job.eligibilityCriteria?.skills && job.eligibilityCriteria.skills.some(skill => skill.toLowerCase().includes(roleFilter.toLowerCase())))
           : true;
       const matchesPackage = packageFilter 
-          ? job.package.toLowerCase().includes(packageFilter.toLowerCase()) 
+          ? parseInt(job.package) >= parseInt(packageFilter)
           : true;
-      return matchesRole && matchesPackage;
+      const matchesDate = dateFilter
+          ? (new Date(job.createdAt) >= new Date(Date.now() - parseInt(dateFilter) * 24 * 60 * 60 * 1000))
+          : true;
+      const matchesLocation = locationFilter
+          ? (job.location && job.location.toLowerCase().includes(locationFilter.toLowerCase()))
+          : true;
+      const matchesCompany = companyFilter
+          ? job.companyName.toLowerCase().includes(companyFilter.toLowerCase())
+          : true;
+          
+      return matchesRole && matchesPackage && matchesDate && matchesLocation && matchesCompany;
   });
 
   return (
@@ -128,7 +156,7 @@ const Jobs = () => {
         </div>
         {user?.role === 'admin' && (
             <button 
-                onClick={() => navigate('/admin')}
+                onClick={() => navigate('/admin/post-job')}
                 className="btn-primary flex items-center gap-2"
             >
                 <Edit size={18} /> Post New Job
@@ -136,44 +164,217 @@ const Jobs = () => {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-        <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Role</label>
-            <div className="relative">
+      {/* LinkedIn Style Filters */}
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+             {/* Search Bar */}
+             <div className="relative w-full md:w-96">
                 <input
                     type="text"
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
-                    placeholder="e.g. Software Engineer"
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black transition-all"
+                    placeholder="Search by title, skill, or company"
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
                 />
-                <Briefcase size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                <Search size={16} className="absolute left-3 top-2.5 text-gray-500" />
+            </div>
+
+            {/* Pill Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+                {/* Package Filter Pill */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setActiveFilter(activeFilter === 'package' ? null : 'package')}
+                        className={`px-4 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 transition-all ${
+                            packageFilter || activeFilter === 'package'
+                                ? 'bg-green-700 text-white border-green-700 hover:bg-green-800'
+                                : 'bg-white text-gray-600 border-gray-400 hover:bg-gray-100 hover:border-gray-500'
+                        }`}
+                    >
+                        Package {packageFilter && `(${packageFilter})`}
+                        <ChevronDown size={14} className={`transition-transform ${activeFilter === 'package' ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {/* Dropdown for Package */}
+                    {activeFilter === 'package' && (
+                        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Min Package (LPA)</label>
+                            <input
+                                type="text"
+                                value={packageFilter}
+                                onChange={(e) => setPackageFilter(e.target.value)}
+                                placeholder="e.g. 10"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-black"
+                                autoFocus
+                            />
+                            <div className="flex justify-end mt-3 gap-2">
+                                <button 
+                                    onClick={() => { setPackageFilter(''); setActiveFilter(null); }}
+                                    className="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                                >
+                                    Clear
+                                </button>
+                                <button 
+                                    onClick={() => setActiveFilter(null)}
+                                    className="px-3 py-1 bg-green-700 text-white text-xs font-bold rounded-md hover:bg-green-800"
+                                >
+                                    Show results
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Date Posted Filter Pill */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setActiveFilter(activeFilter === 'date' ? null : 'date')}
+                        className={`px-4 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 transition-all ${
+                            dateFilter || activeFilter === 'date'
+                                ? 'bg-green-700 text-white border-green-700 hover:bg-green-800'
+                                : 'bg-white text-gray-600 border-gray-400 hover:bg-gray-100 hover:border-gray-500'
+                        }`}
+                    >
+                        Date Posted {dateFilter && '(Applied)'}
+                        <ChevronDown size={14} className={`transition-transform ${activeFilter === 'date' ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {activeFilter === 'date' && (
+                        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Posted Within</label>
+                            <div className="space-y-2">
+                                {[
+                                    { label: 'Any Time', value: '' },
+                                    { label: 'Past 24 hours', value: '1' },
+                                    { label: 'Past Week', value: '7' },
+                                    { label: 'Past Month', value: '30' }
+                                ].map((option) => (
+                                    <label key={option.value} className="flex items-center gap-2 cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="dateFilter"
+                                            checked={dateFilter === option.value}
+                                            onChange={() => setDateFilter(option.value)}
+                                            className="text-green-600 focus:ring-green-500"
+                                        />
+                                        <span className="text-sm text-gray-700">{option.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            <div className="flex justify-end mt-3 gap-2">
+                                <button 
+                                    onClick={() => setActiveFilter(null)}
+                                    className="px-3 py-1 bg-green-700 text-white text-xs font-bold rounded-md hover:bg-green-800"
+                                >
+                                    Show results
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Company Filter Pill */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setActiveFilter(activeFilter === 'company' ? null : 'company')}
+                        className={`px-4 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 transition-all ${
+                            companyFilter || activeFilter === 'company'
+                                ? 'bg-green-700 text-white border-green-700 hover:bg-green-800'
+                                : 'bg-white text-gray-600 border-gray-400 hover:bg-gray-100 hover:border-gray-500'
+                        }`}
+                    >
+                        Company {companyFilter && `(${companyFilter})`}
+                        <ChevronDown size={14} className={`transition-transform ${activeFilter === 'company' ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {activeFilter === 'company' && (
+                        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Company Name</label>
+                            <input
+                                type="text"
+                                value={companyFilter}
+                                onChange={(e) => setCompanyFilter(e.target.value)}
+                                placeholder="e.g. Zoho"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-black"
+                                autoFocus
+                            />
+                            <div className="flex justify-end mt-3 gap-2">
+                                <button 
+                                    onClick={() => { setCompanyFilter(''); setActiveFilter(null); }}
+                                    className="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                                >
+                                    Clear
+                                </button>
+                                <button 
+                                    onClick={() => setActiveFilter(null)}
+                                    className="px-3 py-1 bg-green-700 text-white text-xs font-bold rounded-md hover:bg-green-800"
+                                >
+                                    Show results
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Location Filter Pill */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setActiveFilter(activeFilter === 'location' ? null : 'location')}
+                        className={`px-4 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 transition-all ${
+                            locationFilter || activeFilter === 'location'
+                                ? 'bg-green-700 text-white border-green-700 hover:bg-green-800'
+                                : 'bg-white text-gray-600 border-gray-400 hover:bg-gray-100 hover:border-gray-500'
+                        }`}
+                    >
+                        Location {locationFilter && `(${locationFilter})`}
+                        <ChevronDown size={14} className={`transition-transform ${activeFilter === 'location' ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {activeFilter === 'location' && (
+                        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">City / Region</label>
+                            <input
+                                type="text"
+                                value={locationFilter}
+                                onChange={(e) => setLocationFilter(e.target.value)}
+                                placeholder="e.g. Coimbatore"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-black"
+                                autoFocus
+                            />
+                            
+                            <div className="flex items-center gap-2 mt-3 text-xs text-gray-500 font-medium">
+                                <Edit size={12} />
+                                <span>Within 80 km</span>
+                            </div>
+
+                            <div className="flex justify-end mt-3 gap-2">
+                                <button 
+                                    onClick={() => { setLocationFilter(''); setActiveFilter(null); }}
+                                    className="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                                >
+                                    Clear
+                                </button>
+                                <button 
+                                    onClick={() => setActiveFilter(null)}
+                                    className="px-3 py-1 bg-green-700 text-white text-xs font-bold rounded-md hover:bg-green-800"
+                                >
+                                    Show results
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {(roleFilter || packageFilter || dateFilter || companyFilter || locationFilter) && (
+                    <button 
+                        onClick={() => { setRoleFilter(''); setPackageFilter(''); setDateFilter(''); setCompanyFilter(''); setLocationFilter(''); }}
+                        className="ml-2 text-sm font-semibold text-gray-500 hover:text-black flex items-center gap-1"
+                    >
+                        Reset <X size={14} />
+                    </button>
+                )}
             </div>
         </div>
-        <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Package</label>
-            <div className="relative">
-                <input
-                    type="text"
-                    value={packageFilter}
-                    onChange={(e) => setPackageFilter(e.target.value)}
-                    placeholder="e.g. 12 LPA"
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black transition-all"
-                />
-                <Briefcase size={18} className="absolute left-3 top-2.5 text-gray-400" />
-            </div>
-        </div>
-        {(roleFilter || packageFilter) && (
-            <div className="flex items-end">
-                <button
-                    onClick={() => { setRoleFilter(''); setPackageFilter(''); }}
-                    className="px-4 py-2 text-sm text-red-600 hover:text-red-800 font-medium"
-                >
-                    Clear Filters
-                </button>
-            </div>
-        )}
       </div>
 
       {/* Jobs Grid */}
@@ -192,67 +393,69 @@ const Jobs = () => {
                             <p className="text-sm text-gray-500 font-medium">{job.companyName}</p>
                         </div>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
-                        job.status === 'open' 
-                            ? 'bg-green-50 text-green-700 border-green-100' 
-                            : 'bg-red-50 text-red-700 border-red-100'
-                    }`}>
-                        {job.status}
-                    </span>
-                </div>
-
-                {/* AI Eligibility Score (Student Only) */}
-                {user?.role === 'student' && (
-                    <div className="mb-4">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">AI Eligibility Match</span>
-                            <span className={`text-sm font-bold ${
+                    <div className="flex flex-col items-end gap-1">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                            job.status === 'open' 
+                                ? 'bg-green-50 text-green-700 border-green-100' 
+                                : 'bg-red-50 text-red-700 border-red-100'
+                        }`}>
+                            {job.status}
+                        </span>
+                        
+                        {/* AI Eligibility Score (Student Only) */}
+                        {user?.role === 'student' && (
+                            <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${
                                 calculateMatchScore(job) >= 80 ? 'text-green-600' : 
                                 calculateMatchScore(job) >= 50 ? 'text-yellow-600' : 'text-red-600'
                             }`}>
-                                {calculateMatchScore(job)}%
-                            </span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                            <div 
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                    calculateMatchScore(job) >= 80 ? 'bg-green-500' : 
-                                    calculateMatchScore(job) >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${calculateMatchScore(job)}%` }}
-                            ></div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex items-center gap-4 text-xs text-gray-500 mb-6">
-                    <div className="flex items-center gap-1.5">
-                        <Briefcase size={14} />
-                        <span>{job.package || 'Not disclosed'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <Clock size={14} />
-                        <span>{job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No Deadline'}</span>
-                    </div>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
-                    {job.description}
-                </p>
-                
-                {/* Skills Tags */}
-                {job.eligibilityCriteria?.skills && job.eligibilityCriteria.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        {job.eligibilityCriteria.skills.slice(0, 4).map((skill, index) => (
-                            <span key={index} className="px-2.5 py-1 rounded-md text-xs font-medium bg-gray-50 text-gray-600 border border-gray-100">
-                                {skill}
-                            </span>
-                        ))}
-                        {job.eligibilityCriteria.skills.length > 4 && (
-                            <span className="px-2 py-1 rounded-md text-xs text-gray-400">+{job.eligibilityCriteria.skills.length - 4}</span>
+                                <Zap size={12} fill="currentColor" />
+                                <span>{calculateMatchScore(job)}% Match</span>
+                            </div>
                         )}
                     </div>
-                )}
+                </div>
+
+                <div 
+                    onClick={() => navigate(`/jobs/${job._id}`)}
+                    className="cursor-pointer group-hover:opacity-90 transition-opacity"
+                >
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-6">
+                        <div className="flex items-center gap-1.5">
+                            <Briefcase size={14} />
+                            <span>{job.package || 'Not disclosed'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Clock size={14} />
+                            <span>{job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No Deadline'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <MapPin size={14} />
+                            <span>{job.location || 'Location N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Users size={14} />
+                            <span>{job.openings || 'Multiple'} Openings</span>
+                        </div>
+                    </div>
+                    
+                    <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
+                        {job.description}
+                    </p>
+                    
+                    {/* Skills Tags */}
+                    {job.eligibilityCriteria?.skills && job.eligibilityCriteria.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {job.eligibilityCriteria.skills.slice(0, 4).map((skill, index) => (
+                                <span key={index} className="px-2.5 py-1 rounded-md text-xs font-medium bg-gray-50 text-gray-600 border border-gray-100">
+                                    {skill}
+                                </span>
+                            ))}
+                            {job.eligibilityCriteria.skills.length > 4 && (
+                                <span className="px-2 py-1 rounded-md text-xs text-gray-400">+{job.eligibilityCriteria.skills.length - 4}</span>
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 {/* Interview Rounds Display */}
                 {job.interviewRounds && job.interviewRounds.length > 0 && (

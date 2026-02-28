@@ -40,6 +40,16 @@ const jobSchema = mongoose.Schema({
       type: Date,
       required: true
   },
+  location: {
+      type: String,
+      required: false,
+      default: 'Remote'
+  },
+  openings: {
+      type: Number,
+      required: false,
+      default: 1
+  },
   status: {
       type: String,
       enum: ['open', 'closed'],

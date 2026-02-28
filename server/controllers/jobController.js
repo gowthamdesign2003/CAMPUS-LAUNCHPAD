@@ -5,7 +5,7 @@ import Job from '../models/Job.js';
 // @route   POST /api/jobs
 // @access  Private/Admin
 const createJob = asyncHandler(async (req, res) => {
-  const { companyName, role, description, package: pkg, eligibilityCriteria, deadline, interviewRounds } = req.body;
+  const { companyName, role, description, package: pkg, eligibilityCriteria, deadline, interviewRounds, location, openings } = req.body;
 
   const job = new Job({
     companyName,
@@ -15,6 +15,8 @@ const createJob = asyncHandler(async (req, res) => {
     eligibilityCriteria,
     deadline,
     interviewRounds: interviewRounds || [],
+    location,
+    openings,
     postedBy: req.user._id,
   });
 
@@ -26,7 +28,26 @@ const createJob = asyncHandler(async (req, res) => {
 // @route   GET /api/jobs
 // @access  Private
 const getJobs = asyncHandler(async (req, res) => {
-  const jobs = await Job.find({});
+  const jobs = await Job.aggregate([
+    {
+      $lookup: {
+        from: 'applications',
+        localField: '_id',
+        foreignField: 'job',
+        as: 'applications'
+      }
+    },
+    {
+      $addFields: {
+        applicationCount: { $size: '$applications' }
+      }
+    },
+    {
+      $project: {
+        applications: 0 // Remove the applications array to keep response light
+      }
+    }
+  ]);
   res.json(jobs);
 });
 
@@ -48,7 +69,7 @@ const getJobById = asyncHandler(async (req, res) => {
 // @route   PUT /api/jobs/:id
 // @access  Private/Admin
 const updateJob = asyncHandler(async (req, res) => {
-  const { companyName, role, description, package: pkg, eligibilityCriteria, deadline, status, interviewRounds } = req.body;
+  const { companyName, role, description, package: pkg, eligibilityCriteria, deadline, status, interviewRounds, location, openings } = req.body;
 
   const job = await Job.findById(req.params.id);
 
@@ -61,6 +82,8 @@ const updateJob = asyncHandler(async (req, res) => {
     job.deadline = deadline || job.deadline;
     job.status = status || job.status;
     job.interviewRounds = interviewRounds || job.interviewRounds;
+    job.location = location || job.location;
+    job.openings = openings || job.openings;
 
     const updatedJob = await job.save();
     res.json(updatedJob);

@@ -1,19 +1,46 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Briefcase, User, FileText, CheckCircle, Rocket, Shield, Compass, Calendar, Clock, List, ExternalLink, Video } from 'lucide-react';
+import { 
+    ArrowRight, Briefcase, User, FileText, CheckCircle, Rocket, Shield, 
+    Compass, Calendar, Clock, List, ExternalLink, Video, Search, Plus, 
+    MoreHorizontal, Edit, Trash2, Eye, Users
+} from 'lucide-react';
 import api from '../api/axios';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [upcomingInterviews, setUpcomingInterviews] = useState([]);
+  const [postedJobs, setPostedJobs] = useState([]); // For Admin
+  const [loadingJobs, setLoadingJobs] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
       if (user?.role === 'student') {
           fetchInterviews();
+      } else if (user?.role === 'admin') {
+          fetchPostedJobs();
       }
   }, [user]);
+
+  const fetchPostedJobs = async () => {
+      setLoadingJobs(true);
+      try {
+          const { data } = await api.get('/jobs'); // Fetch all jobs for admin
+          setPostedJobs(data);
+      } catch (error) {
+          console.error("Failed to fetch jobs", error);
+      } finally {
+          setLoadingJobs(false);
+      }
+  };
+
+  const filteredPostedJobs = postedJobs.filter(job => 
+    job.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    job.companyName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchInterviews = async () => {
       try {
@@ -78,6 +105,165 @@ const Dashboard = () => {
         </div>
     </Link>
   );
+
+  // Admin Dashboard View
+  if (user?.role === 'admin') {
+      return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Welcome Header */}
+            <div className="mb-12 bg-black text-white p-10 rounded-3xl relative overflow-hidden">
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-4 opacity-80">
+                        <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-medium uppercase tracking-wider backdrop-blur-sm">
+                            Admin Dashboard
+                        </span>
+                        <span className="text-sm">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+                        Welcome back, {user?.name?.split(' ')[0]} 👋
+                    </h1>
+                    <p className="text-gray-300 max-w-2xl text-lg">
+                        Manage recruitment drives, student applications, and placement statistics from one central hub.
+                    </p>
+                </div>
+                {/* Abstract Background Shapes */}
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
+            </div>
+
+            {/* Header Flex */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Provide Opportunities</h1>
+                    <p className="text-gray-500 text-sm mt-1">Manage job postings and student applications.</p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    {/* Search Bar */}
+                    <div className="relative flex-grow sm:flex-grow-0 sm:w-80">
+                        <input 
+                            type="text" 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search jobs..." 
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all shadow-sm"
+                        />
+                        <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                    </div>
+                    
+                    {/* Post New Job Button */}
+                    <button 
+                        onClick={() => navigate('/admin/post-job')} 
+                        className="btn-primary flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all"
+                    >
+                        <Plus size={18} /> Post New Job
+                    </button>
+                </div>
+            </div>
+
+            {/* Jobs Table */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                                <th className="px-6 py-4">Company Name</th>
+                                <th className="px-6 py-4">Role</th>
+                                <th className="px-6 py-4">Package</th>
+                                <th className="px-6 py-4 text-center">Applied</th>
+                                <th className="px-6 py-4">Posted Date</th>
+                                <th className="px-6 py-4">Deadline</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {loadingJobs ? (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">Loading jobs...</td>
+                                </tr>
+                            ) : filteredPostedJobs.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No jobs found.</td>
+                                </tr>
+                            ) : (
+                                filteredPostedJobs.map((job) => (
+                                    <tr key={job._id} className="hover:bg-gray-50/50 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
+                                                    {job.companyName.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <span className="font-medium text-gray-900">{job.companyName}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 font-medium">{job.role}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{job.package}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 cursor-pointer hover:bg-blue-100" onClick={() => navigate(`/admin/applications/${job._id}`)}>
+                                                {job.applicationCount || 0}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {new Date(job.createdAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => navigate(`/admin/applications/${job._id}`)}
+                                                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                                    title="View Applications"
+                                                >
+                                                    <Users size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => navigate(`/jobs/${job._id}`)}
+                                                    className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors" 
+                                                    title="View Job Details"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => navigate(`/jobs/${job._id}/edit`)}
+                                                    className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" 
+                                                    title="Edit Job"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button 
+                                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                                                    title="Delete Job"
+                                                    onClick={async () => {
+                                                        if(window.confirm('Delete this job?')) {
+                                                            await api.delete(`/jobs/${job._id}`);
+                                                            fetchPostedJobs();
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {/* Pagination (Static for now) */}
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                    <span>Showing {filteredPostedJobs.length} jobs</span>
+                    <div className="flex gap-2">
+                        <button className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50" disabled>Previous</button>
+                        <button className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50" disabled>Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -227,16 +413,6 @@ const Dashboard = () => {
           </>
         )}
 
-        {user?.role === 'admin' && (
-          <ActionCard 
-              to="/admin" 
-              title="Admin Control Panel" 
-              description="Post new jobs, manage student applications, and schedule interview rounds."
-              icon={Shield}
-              colorClass="text-indigo-600"
-              bgClass="bg-indigo-50"
-          />
-        )}
       </div>
     </div>
   );
