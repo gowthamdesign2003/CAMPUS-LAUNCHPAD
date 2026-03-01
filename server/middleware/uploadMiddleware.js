@@ -14,19 +14,24 @@ const storage = multer.diskStorage({
 });
 
 function checkFileType(file, cb) {
-  const filetypes = /pdf/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
-
-  if (extname && mimetype) {
+  const allowedExts = ['.pdf', '.doc', '.docx'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  const mime = (file.mimetype || '').toLowerCase();
+  const isAllowedExt = allowedExts.includes(ext);
+  const isDoc = mime.includes('application/msword');
+  const isDocx = mime.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  const isPdf = mime.includes('application/pdf');
+  if (isAllowedExt && (isPdf || isDoc || isDocx || mime === '')) {
     return cb(null, true);
-  } else {
-    cb('Error: PDFs Only!');
   }
+  cb('Invalid file type. Upload PDF, DOC, or DOCX only.');
 }
 
 const upload = multer({
   storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
   fileFilter: function (req, file, cb) {
     checkFileType(file, cb);
   },

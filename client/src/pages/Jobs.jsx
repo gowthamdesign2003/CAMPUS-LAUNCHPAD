@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -18,14 +18,7 @@ const Jobs = () => {
   const [companyFilter, setCompanyFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState(null); // 'role', 'package', 'date', 'location', 'company' or null
 
-  useEffect(() => {
-    fetchJobs();
-    if (user?.role === 'student') {
-        fetchAppliedJobs();
-    }
-  }, [user]);
-
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const { data } = await api.get('/jobs');
       setJobs(data);
@@ -33,9 +26,9 @@ const Jobs = () => {
       console.error(error);
       toast.error('Failed to fetch jobs');
     }
-  };
+  }, []);
 
-  const fetchAppliedJobs = async () => {
+  const fetchAppliedJobs = useCallback(async () => {
       try {
           const { data } = await api.get('/applications/my');
           const ids = data.map(app => app.job?._id);
@@ -43,7 +36,14 @@ const Jobs = () => {
       } catch (error) {
           console.error("Failed to fetch applications", error);
       }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchJobs();
+    if (user?.role === 'student') {
+        fetchAppliedJobs();
+    }
+  }, [user, fetchJobs, fetchAppliedJobs]);
 
   const isEligible = (job) => {
       if (!user?.profile) return true; // Can't determine, default to true or handle appropriately
@@ -123,7 +123,7 @@ const Jobs = () => {
       }
   }
 
-  // Filter jobs
+  const nowRef = useRef(Date.now());
   const filteredJobs = jobs.filter(job => {
       const matchesRole = roleFilter 
           ? job.role.toLowerCase().includes(roleFilter.toLowerCase()) || 
@@ -134,7 +134,7 @@ const Jobs = () => {
           ? parseInt(job.package) >= parseInt(packageFilter)
           : true;
       const matchesDate = dateFilter
-          ? (new Date(job.createdAt) >= new Date(Date.now() - parseInt(dateFilter) * 24 * 60 * 60 * 1000))
+          ? (new Date(job.createdAt) >= new Date(nowRef.current - parseInt(dateFilter) * 24 * 60 * 60 * 1000))
           : true;
       const matchesLocation = locationFilter
           ? (job.location && job.location.toLowerCase().includes(locationFilter.toLowerCase()))
@@ -380,10 +380,10 @@ const Jobs = () => {
       {/* Jobs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredJobs.map((job) => (
-          <div key={job._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full overflow-hidden group">
+          <div key={job._id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden group">
             
             <div className="p-6 flex-grow">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-5">
                     <div className="flex gap-3">
                         <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-700 group-hover:bg-black group-hover:text-white transition-colors duration-300">
                             <Building size={24} />
@@ -393,8 +393,8 @@ const Jobs = () => {
                             <p className="text-sm text-gray-500 font-medium">{job.companyName}</p>
                         </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                    <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
                             job.status === 'open' 
                                 ? 'bg-green-50 text-green-700 border-green-100' 
                                 : 'bg-red-50 text-red-700 border-red-100'
@@ -402,15 +402,14 @@ const Jobs = () => {
                             {job.status}
                         </span>
                         
-                        {/* AI Eligibility Score (Student Only) */}
                         {user?.role === 'student' && (
-                            <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${
-                                calculateMatchScore(job) >= 80 ? 'text-green-600' : 
-                                calculateMatchScore(job) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+                                calculateMatchScore(job) >= 80 ? 'bg-green-50 text-green-700 border-green-100' : 
+                                calculateMatchScore(job) >= 50 ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
                             }`}>
-                                <Zap size={12} fill="currentColor" />
-                                <span>{calculateMatchScore(job)}% Match</span>
-                            </div>
+                                <Zap size={12} className="inline" />
+                                {calculateMatchScore(job)}% Match
+                            </span>
                         )}
                     </div>
                 </div>
@@ -419,7 +418,7 @@ const Jobs = () => {
                     onClick={() => navigate(`/jobs/${job._id}`)}
                     className="cursor-pointer group-hover:opacity-90 transition-opacity"
                 >
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-6">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 mb-5">
                         <div className="flex items-center gap-1.5">
                             <Briefcase size={14} />
                             <span>{job.package || 'Not disclosed'}</span>
@@ -438,20 +437,20 @@ const Jobs = () => {
                         </div>
                     </div>
                     
-                    <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
+                    <p className="text-gray-700 text-sm mb-5 line-clamp-3 leading-relaxed">
                         {job.description}
                     </p>
                     
                     {/* Skills Tags */}
                     {job.eligibilityCriteria?.skills && job.eligibilityCriteria.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-6">
+                        <div className="flex flex-wrap gap-2 mb-5">
                             {job.eligibilityCriteria.skills.slice(0, 4).map((skill, index) => (
-                                <span key={index} className="px-2.5 py-1 rounded-md text-xs font-medium bg-gray-50 text-gray-600 border border-gray-100">
+                                <span key={index} className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-gray-50 text-gray-700 border border-gray-200">
                                     {skill}
                                 </span>
                             ))}
                             {job.eligibilityCriteria.skills.length > 4 && (
-                                <span className="px-2 py-1 rounded-md text-xs text-gray-400">+{job.eligibilityCriteria.skills.length - 4}</span>
+                                <span className="px-2 py-1 rounded-md text-[11px] text-gray-400">+{job.eligibilityCriteria.skills.length - 4}</span>
                             )}
                         </div>
                     )}
@@ -459,8 +458,8 @@ const Jobs = () => {
 
                 {/* Interview Rounds Display */}
                 {job.interviewRounds && job.interviewRounds.length > 0 && (
-                    <div className="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                        <div className="flex items-center gap-2 mb-3 text-blue-800 font-bold text-xs uppercase tracking-wide">
+                    <div className="mb-5 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                        <div className="flex items-center gap-2 mb-2 text-blue-800 font-bold text-xs uppercase tracking-wide">
                             <Calendar size={14} /> Interview Schedule
                         </div>
                         <div className="space-y-3">
@@ -472,7 +471,7 @@ const Jobs = () => {
                                             <span>{new Date(round.date).toLocaleDateString()}</span>
                                         )}
                                         {round.time && (
-                                            <span className="bg-white px-2 py-0.5 rounded border border-gray-200">{round.time}</span>
+                                            <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200">{round.time}</span>
                                         )}
                                     </div>
                                 </div>
