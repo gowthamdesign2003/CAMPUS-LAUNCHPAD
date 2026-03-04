@@ -84,7 +84,7 @@ const getJobApplications = asyncHandler(async (req, res) => {
   res.json(applications);
 });
 
-// @desc    Update application status
+// @desc    Update application status or interview schedule
 // @route   PUT /api/applications/:id
 // @access  Private/Admin
 const updateApplicationStatus = asyncHandler(async (req, res) => {
@@ -95,6 +95,14 @@ const updateApplicationStatus = asyncHandler(async (req, res) => {
       application.status = req.body.status || application.status;
       if (req.body.interviewDate) {
           application.interviewDate = req.body.interviewDate;
+      }
+      if (Array.isArray(req.body.interviewSlots)) {
+          application.interviewSlots = req.body.interviewSlots.map(s => ({
+              roundName: s.roundName,
+              date: s.date ? new Date(s.date) : undefined,
+              time: s.time,
+              link: s.link
+          }));
       }
 
       const updatedApplication = await application.save();

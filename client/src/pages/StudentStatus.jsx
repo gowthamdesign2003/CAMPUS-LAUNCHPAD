@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
-import { Users, Filter, CheckCircle, XCircle, Search, Download } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Search } from 'lucide-react';
 
 const StudentStatus = () => {
   const [students, setStudents] = useState([]);
@@ -11,11 +11,7 @@ const StudentStatus = () => {
 
   const departments = ['All', 'CSE', 'IT', 'AI & ML', 'CSD', 'AI & DS', 'ECE', 'MECH', 'CIVIL'];
 
-  useEffect(() => {
-    fetchStudentStatus();
-  }, [selectedDept]);
-
-  const fetchStudentStatus = async () => {
+  const fetchStudentStatus = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get(`/users/status?department=${selectedDept}`);
@@ -26,12 +22,32 @@ const StudentStatus = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDept]);
+
+  useEffect(() => {
+    fetchStudentStatus();
+  }, [fetchStudentStatus]);
 
   const filteredStudents = students.filter(student => 
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const CountUp = ({ to = 0, duration = 800 }) => {
+    const [val, setVal] = useState(0);
+    useEffect(() => {
+      let raf;
+      const start = performance.now();
+      const animate = (t) => {
+        const p = Math.min(1, (t - start) / duration);
+        setVal(Math.round(p * to));
+        if (p < 1) raf = requestAnimationFrame(animate);
+      };
+      raf = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(raf);
+    }, [to, duration]);
+    return <>{val}</>;
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -42,54 +58,65 @@ const StudentStatus = () => {
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-            {departments.map((dept) => (
-                <button
-                    key={dept}
-                    onClick={() => setSelectedDept(dept)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                        selectedDept === dept 
-                            ? 'bg-black text-white shadow-md' 
-                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-black'
-                    }`}
-                >
-                    {dept}
-                </button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <label className="text-sm font-medium text-gray-600">Department</label>
+          <select
+            value={selectedDept}
+            onChange={(e) => setSelectedDept(e.target.value)}
+            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black"
+          >
+            {departments.map((d) => (
+              <option key={d} value={d}>{d}</option>
             ))}
+          </select>
         </div>
-        <div className="relative w-full md:w-64">
-            <input
-                type="text"
-                placeholder="Search students..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
-            />
-            <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+        <div className="relative w-full md:w-80">
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-sm"
+          />
+          <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-gray-500 mb-1">Total Students</div>
-              <div className="text-3xl font-bold text-gray-900">{students.length}</div>
+        <div className="bg-white p-6 rounded-2xl ring-1 ring-gray-900/5 shadow-sm">
+          <div className="text-sm font-medium text-gray-500 mb-2">Total Students</div>
+          <div className="text-4xl font-extrabold text-gray-900">
+            <CountUp to={students.length} />
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-gray-500 mb-1">Placed Students</div>
-              <div className="text-3xl font-bold text-green-600">
-                  {students.filter(s => s.isPlaced).length}
-                  <span className="text-sm font-normal text-gray-400 ml-2">
-                      ({students.length > 0 ? Math.round((students.filter(s => s.isPlaced).length / students.length) * 100) : 0}%)
-                  </span>
-              </div>
+          <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-gray-800 rounded-full transition-all" style={{ width: '100%' }} />
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-              <div className="text-sm font-medium text-gray-500 mb-1">Total Offers</div>
-              <div className="text-3xl font-bold text-blue-600">
-                  {students.reduce((acc, curr) => acc + (curr.offerCount || 0), 0)}
-              </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl ring-1 ring-gray-900/5 shadow-sm">
+          <div className="text-sm font-medium text-gray-500 mb-2">Placed Students</div>
+          <div className="text-4xl font-extrabold text-emerald-700 flex items-baseline gap-2">
+            <CountUp to={students.filter(s => s.isPlaced).length} />
+            <span className="text-sm font-medium text-gray-400">
+              ({students.length > 0 ? Math.round((students.filter(s => s.isPlaced).length / students.length) * 100) : 0}%)
+            </span>
           </div>
+          <div className="mt-2 h-1.5 bg-emerald-50 rounded-full overflow-hidden">
+            <div
+              className="h-1.5 bg-emerald-600 rounded-full transition-all"
+              style={{ width: `${students.length > 0 ? Math.round((students.filter(s => s.isPlaced).length / students.length) * 100) : 0}%` }}
+            />
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl ring-1 ring-gray-900/5 shadow-sm">
+          <div className="text-sm font-medium text-gray-500 mb-2">Total Offers</div>
+          <div className="text-4xl font-extrabold text-indigo-700">
+            <CountUp to={students.reduce((acc, curr) => acc + (curr.offerCount || 0), 0)} />
+          </div>
+          <div className="mt-2 h-1.5 bg-indigo-50 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-indigo-600 rounded-full transition-all" style={{ width: '100%' }} />
+          </div>
+        </div>
       </div>
 
       {/* Table */}
@@ -103,10 +130,13 @@ const StudentStatus = () => {
                         <tr>
                             <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Student Name</th>
                             <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Department</th>
+                            <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Year</th>
                             <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Applications</th>
                             <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Offers</th>
                             <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">CGPA</th>
                             <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
+                            <th className="py-4 px-6 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Verified</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
@@ -121,6 +151,7 @@ const StudentStatus = () => {
                                         {student.department || 'N/A'}
                                     </span>
                                 </td>
+                                <td className="py-4 px-6 text-sm text-gray-600">{student.year || '-'}</td>
                                 <td className="py-4 px-6">
                                     {student.isPlaced ? (
                                         <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
@@ -133,6 +164,9 @@ const StudentStatus = () => {
                                     )}
                                 </td>
                                 <td className="py-4 px-6">
+                                    <div className="font-semibold text-gray-900">{student.applicationsCount ?? '-'}</div>
+                                </td>
+                                <td className="py-4 px-6">
                                     <div className="font-semibold text-gray-900">{student.offerCount}</div>
                                 </td>
                                 <td className="py-4 px-6">
@@ -140,6 +174,13 @@ const StudentStatus = () => {
                                 </td>
                                 <td className="py-4 px-6 text-sm text-gray-500">
                                     {student.mobile || '-'}
+                                </td>
+                                <td className="py-4 px-6">
+                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                      student.isVerified ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-50 text-gray-500 border border-gray-200'
+                                    }`}>
+                                      {student.isVerified ? 'Verified' : 'Pending'}
+                                    </span>
                                 </td>
                             </tr>
                         ))}

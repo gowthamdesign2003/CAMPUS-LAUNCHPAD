@@ -16,6 +16,7 @@ const JobDetails = () => {
   const [loading, setLoading] = useState(true);
   const [appliedJobIds, setAppliedJobIds] = useState([]);
   const [applicationStatus, setApplicationStatus] = useState(null);
+  const [application, setApplication] = useState(null);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -46,6 +47,7 @@ const JobDetails = () => {
           const currentApp = data.find(app => app.job?._id === id);
           if (currentApp) {
               setApplicationStatus(currentApp.status);
+              setApplication(currentApp);
           }
       } catch (error) {
           console.error("Failed to fetch applications", error);
@@ -211,20 +213,56 @@ const JobDetails = () => {
                               <Calendar size={20} className="text-gray-400" /> Interview Process
                           </h2>
                           <div className="space-y-4">
-                              {job.interviewRounds?.map((round, idx) => (
-                                  <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
-                                      <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center font-bold text-gray-500">
-                                          {idx + 1}
-                                      </div>
-                                      <div className="flex-grow">
-                                          <h4 className="font-bold text-gray-900">{round.roundName}</h4>
-                                          <div className="flex gap-4 text-xs text-gray-500 mt-1">
-                                              {round.date && <span>Date: {new Date(round.date).toLocaleDateString()}</span>}
-                                              {round.time && <span>Time: {round.time}</span>}
+                              {(() => {
+                                  const generalRounds = job.interviewRounds || [];
+                                  const individualSlots = application?.interviewSlots || [];
+                                  const allRounds = [...generalRounds, ...individualSlots];
+
+                                  if (allRounds.length === 0) {
+                                      return (
+                                          <div className="text-sm text-gray-500 italic p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-center">
+                                              No interview rounds scheduled yet.
+                                          </div>
+                                      );
+                                  }
+
+                                  return allRounds.map((round, idx) => (
+                                      <div key={idx} className="flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                          <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center font-bold text-indigo-600 text-lg border border-indigo-100">
+                                              {idx + 1}
+                                          </div>
+                                          <div className="flex-grow">
+                                              <div className="flex items-center justify-between">
+                                                  <h4 className="font-bold text-gray-900 text-lg">{round.roundName}</h4>
+                                                  {round.link && (
+                                                      <a 
+                                                          href={round.link} 
+                                                          target="_blank" 
+                                                          rel="noopener noreferrer" 
+                                                          className="text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors"
+                                                      >
+                                                          Join Link
+                                                      </a>
+                                                  )}
+                                              </div>
+                                              <div className="flex gap-4 text-sm text-gray-500 mt-1 font-medium">
+                                                  {round.date && (
+                                                      <span className="flex items-center gap-1.5">
+                                                          <Calendar size={14} className="text-gray-400" />
+                                                          Date: {new Date(round.date).toLocaleDateString('en-GB')}
+                                                      </span>
+                                                  )}
+                                                  {round.time && (
+                                                      <span className="flex items-center gap-1.5">
+                                                          <Clock size={14} className="text-gray-400" />
+                                                          Time: {round.time}
+                                                      </span>
+                                                  )}
+                                              </div>
                                           </div>
                                       </div>
-                                  </div>
-                              ))}
+                                  ));
+                              })()}
                           </div>
                       </section>
                   )}

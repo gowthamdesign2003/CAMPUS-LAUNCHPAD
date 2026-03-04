@@ -22,9 +22,19 @@ const applicationSchema = mongoose.Schema({
   },
   interviewDate: {
       type: Date
+  },
+  interviewSlots: {
+      type: [{
+          roundName: { type: String, required: true },
+          date: { type: Date },
+          time: { type: String },
+          link: { type: String }
+      }],
+      default: []
   }
 }, {
   timestamps: true,
+  strict: true
 });
 
 const Application = mongoose.model('Application', applicationSchema);

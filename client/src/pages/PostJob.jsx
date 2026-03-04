@@ -24,7 +24,7 @@ const PostJob = () => {
 
   const [departmentInput, setDepartmentInput] = useState('');
   const [skillInput, setSkillInput] = useState('');
-  const [roundInput, setRoundInput] = useState({ roundName: '', date: '', time: '' });
+  const [roundInput, setRoundInput] = useState({ roundName: '', date: '', time: '', link: '' });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,7 +74,7 @@ const PostJob = () => {
         ...formData,
         interviewRounds: [...formData.interviewRounds, roundInput]
       });
-      setRoundInput({ roundName: '', date: '', time: '' });
+      setRoundInput({ roundName: '', date: '', time: '', link: '' });
     }
   };
 
@@ -270,7 +270,7 @@ const PostJob = () => {
                   <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-2">
                       <List size={20} className="text-orange-600" /> Interview Process
                   </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
                       <input 
                           type="text" 
                           placeholder="Round Name (e.g. Aptitude)"
@@ -283,6 +283,13 @@ const PostJob = () => {
                           value={roundInput.date}
                           onChange={(e) => setRoundInput({...roundInput, date: e.target.value})}
                           className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                      />
+                      <input
+                          type="url"
+                          value={roundInput.link}
+                          onChange={(e) => setRoundInput({ ...roundInput, link: e.target.value })}
+                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                          placeholder="Meet Link (optional)"
                       />
                       <div className="flex gap-2">
                           <input 
@@ -301,6 +308,11 @@ const PostJob = () => {
                               <div>
                                   <span className="font-bold text-gray-900 block">{idx + 1}. {round.roundName}</span>
                                   <span className="text-xs text-gray-500">{round.date} {round.time && `at ${round.time}`}</span>
+                                  {round.link && (
+                                    <a href={round.link} target="_blank" rel="noopener noreferrer" className="block text-xs text-blue-600 hover:underline mt-1">
+                                      Attend Link
+                                    </a>
+                                  )}
                               </div>
                               <button type="button" onClick={() => removeArrayItem('round', idx)} className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors">
                                   <Trash2 size={16} />

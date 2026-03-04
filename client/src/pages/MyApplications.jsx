@@ -73,35 +73,57 @@ const MyApplications = () => {
                                     </span>
                                 </td>
                                 <td className="py-5 px-6">
-                                    {app.job?.interviewRounds && app.job.interviewRounds.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {app.job.interviewRounds.map((round, idx) => (
-                                                <div key={idx} className="text-sm">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-gray-900">{round.roundName}</span>
-                                                        {round.date && <span className="text-xs text-gray-500">({new Date(round.date).toLocaleDateString()})</span>}
+                                    {(() => {
+                                        const generalRounds = app.job?.interviewRounds || [];
+                                        const individualSlots = app.interviewSlots || [];
+                                        const allRounds = [...generalRounds, ...individualSlots];
+
+                                        if (allRounds.length === 0 && !app.interviewDate) {
+                                            return <span className="text-sm text-gray-400 font-medium">No schedule yet</span>;
+                                        }
+
+                                        return (
+                                            <div className="space-y-3">
+                                                {allRounds.map((round, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3 text-sm">
+                                                        <div className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-indigo-100/50">
+                                                            {round.roundName || 'Interview'}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-gray-500 font-medium text-xs">
+                                                            {round.date && (
+                                                                <span>{new Date(round.date).toLocaleDateString('en-GB')}</span>
+                                                            )}
+                                                            {round.time && (
+                                                                <span className="bg-gray-50 px-2 py-0.5 rounded border border-gray-200 text-gray-700">
+                                                                    {round.time}
+                                                                </span>
+                                                            )}
+                                                            {round.link && (
+                                                                <a 
+                                                                    href={round.link} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer" 
+                                                                    className="text-blue-600 hover:text-blue-800 font-bold ml-1"
+                                                                >
+                                                                    Join
+                                                                </a>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    {round.link && (
-                                                        <a href={round.link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline block truncate max-w-[150px]">
-                                                            Join Link
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : app.interviewDate ? (
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-yellow-50 text-yellow-700 p-2 rounded-lg border border-yellow-100">
-                                                <Calendar size={18} />
+                                                ))}
+                                                {allRounds.length === 0 && app.interviewDate && (
+                                                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                                                        <div className="bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider border border-yellow-100/50">
+                                                            Interview
+                                                        </div>
+                                                        <span className="text-gray-500 text-xs font-medium">
+                                                            {new Date(app.interviewDate).toLocaleString('en-GB')}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-500 uppercase">Interview Scheduled</div>
-                                                <div className="text-sm font-medium text-gray-900">{new Date(app.interviewDate).toLocaleString()}</div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <span className="text-sm text-gray-400 font-medium">No schedule yet</span>
-                                    )}
+                                        );
+                                    })()}
                                 </td>
                             </tr>
                         );

@@ -123,7 +123,10 @@ const Jobs = () => {
       }
   }
 
-  const nowRef = useRef(Date.now());
+  const nowRef = useRef(0);
+  useEffect(() => {
+    nowRef.current = Date.now();
+  }, []);
   const filteredJobs = jobs.filter(job => {
       const matchesRole = roleFilter 
           ? job.role.toLowerCase().includes(roleFilter.toLowerCase()) || 
@@ -377,154 +380,127 @@ const Jobs = () => {
         </div>
       </div>
 
-      {/* Jobs Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Jobs List */}
+      <div className="flex flex-col gap-6">
         {filteredJobs.map((job) => (
-          <div key={job._id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden group">
-            
-            <div className="p-6 flex-grow">
-                <div className="flex justify-between items-start mb-5">
-                    <div className="flex gap-3">
-                        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-700 group-hover:bg-black group-hover:text-white transition-colors duration-300">
-                            <Building size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{job.role}</h3>
-                            <p className="text-sm text-gray-500 font-medium">{job.companyName}</p>
-                        </div>
-                    </div>
+          <div key={job._id} className="bg-white rounded-xl border border-gray-200/80 shadow-sm hover:shadow-lg hover:border-gray-300/80 transition-all duration-300 flex group">
+            {/* Left Column: Company Name */}
+            <div className="w-44 flex-shrink-0 bg-gray-50/60 border-r border-gray-200/80 flex items-center justify-center p-5">
+                <div className="text-center">
+                    <h4 className="font-bold text-gray-800 text-lg tracking-tight">{job.companyName}</h4>
+                    {job.companyWebsite && (
+                        <a href={job.companyWebsite} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-1 font-medium">
+                            View Website
+                        </a>
+                    )}
+                </div>
+            </div>
+
+            {/* Right Column: Job Details */}
+            <div className="p-5 flex-grow flex flex-col">
+                {/* Top section: Badges and actions */}
+                <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize tracking-wide ring-1 ${
                             job.status === 'open' 
-                                ? 'bg-green-50 text-green-700 border-green-100' 
-                                : 'bg-red-50 text-red-700 border-red-100'
+                                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/80' 
+                                : 'bg-rose-50 text-rose-700 ring-rose-200/80'
                         }`}>
                             {job.status}
                         </span>
-                        
                         {user?.role === 'student' && (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
-                                calculateMatchScore(job) >= 80 ? 'bg-green-50 text-green-700 border-green-100' : 
-                                calculateMatchScore(job) >= 50 ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ring-1 ${
+                                calculateMatchScore(job) >= 80 ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/80' : 
+                                calculateMatchScore(job) >= 50 ? 'bg-amber-50 text-amber-700 ring-amber-200/80' : 'bg-rose-50 text-rose-700 ring-rose-200/80'
                             }`}>
-                                <Zap size={12} className="inline" />
+                                <Zap size={13} className="shrink-0 -ml-0.5" />
                                 {calculateMatchScore(job)}% Match
                             </span>
                         )}
                     </div>
+                    {/* Action icons can go here if needed */}
                 </div>
 
-                <div 
-                    onClick={() => navigate(`/jobs/${job._id}`)}
-                    className="cursor-pointer group-hover:opacity-90 transition-opacity"
-                >
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600 mb-5">
-                        <div className="flex items-center gap-1.5">
-                            <Briefcase size={14} />
-                            <span>{job.package || 'Not disclosed'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <Clock size={14} />
-                            <span>{job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No Deadline'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <MapPin size={14} />
-                            <span>{job.location || 'Location N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <Users size={14} />
-                            <span>{job.openings || 'Multiple'} Openings</span>
+                {/* Main Info */}
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => navigate(`/jobs/${job._id}`)}>{job.role}</h3>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 mt-2">
+                            <div className="inline-flex items-center gap-1.5"><MapPin size={14} /> {job.location || 'Not specified'}</div>
+                            <div className="inline-flex items-center gap-1.5"><Briefcase size={14} /> {job.package || 'Not disclosed'}</div>
+                            <div className="inline-flex items-center gap-1.5"><Clock size={14} /> {job.deadline ? `Apply by ${new Date(job.deadline).toLocaleDateString()}` : 'No Deadline'}</div>
                         </div>
                     </div>
-                    
-                    <p className="text-gray-700 text-sm mb-5 line-clamp-3 leading-relaxed">
-                        {job.description}
-                    </p>
-                    
-                    {/* Skills Tags */}
-                    {job.eligibilityCriteria?.skills && job.eligibilityCriteria.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-5">
+                    <div className="text-right flex-shrink-0 pl-4">
+                        {user?.role === 'admin' ? (
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => navigate(`/jobs/${job._id}/edit`)}
+                                    className="h-10 px-3 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700"
+                                >
+                                    <Edit size={14} /> Edit
+                                </button>
+                                <button 
+                                    onClick={() => handleDelete(job._id)}
+                                    className="h-10 px-3 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={() => navigate(`/jobs/${job._id}`)}
+                                className="h-11 px-6 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all bg-gray-900 text-white hover:bg-gray-700"
+                            >
+                                View Job <ArrowRight size={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Spacer */}
+                <div className="flex-grow" />
+
+                {/* Footer: Skills and Apply button */}
+                <div className="mt-4 pt-4 border-t border-gray-100 flex items-end justify-between">
+                    {job.eligibilityCriteria?.skills && job.eligibilityCriteria.skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
                             {job.eligibilityCriteria.skills.slice(0, 4).map((skill, index) => (
-                                <span key={index} className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                                <span key={index} className="px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200/80">
                                     {skill}
                                 </span>
                             ))}
                             {job.eligibilityCriteria.skills.length > 4 && (
-                                <span className="px-2 py-1 rounded-md text-[11px] text-gray-400">+{job.eligibilityCriteria.skills.length - 4}</span>
+                                <span className="px-2 py-1 rounded-md text-xs text-gray-400 font-medium">+{job.eligibilityCriteria.skills.length - 4} more</span>
                             )}
                         </div>
+                    ) : <div />}
+                    {user?.role === 'student' && (
+                         <button 
+                            onClick={() => handleApply(job._id)}
+                            disabled={job.status !== 'open' || appliedJobIds.includes(job._id) || !isEligible(job)}
+                            className={`h-9 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                                appliedJobIds.includes(job._id)
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : !isEligible(job)
+                                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                        : job.status === 'open'
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                            : 'bg-gray-100 text-gray-500 border border-gray-200'
+                            }`}
+                        >
+                            {appliedJobIds.includes(job._id) ? (
+                                <><CheckCircle size={14} /> Applied</>
+                            ) : !isEligible(job) ? (
+                                'Not Eligible'
+                            ) : job.status === 'open' ? (
+                                'Apply Now'
+                            ) : (
+                                'Closed'
+                            )}
+                        </button>
                     )}
                 </div>
-
-                {/* Interview Rounds Display */}
-                {job.interviewRounds && job.interviewRounds.length > 0 && (
-                    <div className="mb-5 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2 text-blue-800 font-bold text-xs uppercase tracking-wide">
-                            <Calendar size={14} /> Interview Schedule
-                        </div>
-                        <div className="space-y-3">
-                            {job.interviewRounds.map((round, idx) => (
-                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between text-sm gap-1">
-                                    <span className="font-semibold text-gray-900">{round.roundName}</span>
-                                    <div className="flex items-center gap-3 text-gray-500 text-xs">
-                                        {round.date && (
-                                            <span>{new Date(round.date).toLocaleDateString()}</span>
-                                        )}
-                                        {round.time && (
-                                            <span className="bg-white px-2 py-0.5 rounded-md border border-gray-200">{round.time}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Action Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
-                {user?.role === 'admin' ? (
-                    <div className="flex gap-2 w-full">
-                        <button 
-                            onClick={() => navigate(`/jobs/${job._id}/edit`)}
-                            className="flex-1 btn-secondary py-2 text-xs"
-                        >
-                            Edit
-                        </button>
-                        <button 
-                            onClick={() => handleDelete(job._id)}
-                            className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 py-2 px-4 rounded-md text-xs font-bold transition-colors border border-red-100"
-                        >
-                            Delete
-                        </button>
-                    </div>
-                ) : (
-                    <button 
-                        onClick={() => handleApply(job._id)}
-                        disabled={job.status !== 'open' || appliedJobIds.includes(job._id) || !isEligible(job)}
-                        className={`w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-                            appliedJobIds.includes(job._id)
-                                ? 'bg-green-50 text-green-700 border border-green-200 cursor-default'
-                                : !isEligible(job)
-                                    ? 'bg-red-50 text-red-700 border border-red-200 cursor-not-allowed'
-                                    : job.status === 'open'
-                                        ? 'bg-black text-white hover:bg-gray-800 shadow-sm hover:shadow'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                    >
-                        {appliedJobIds.includes(job._id) ? (
-                            <>
-                                <CheckCircle size={16} /> Applied
-                            </>
-                        ) : !isEligible(job) ? (
-                            'Not Eligible'
-                        ) : job.status === 'open' ? (
-                            <>Apply Now <ArrowRight size={16} /></>
-                        ) : (
-                            'Applications Closed'
-                        )}
-                    </button>
-                )}
             </div>
           </div>
         ))}
