@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
-import { Users, CheckCircle, XCircle, Search } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Search, User } from 'lucide-react';
 
 const StudentStatus = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState('All');
@@ -141,9 +143,9 @@ const StudentStatus = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
                         {filteredStudents.map((student) => (
-                            <tr key={student._id} className="hover:bg-gray-50/50 transition-colors">
+                            <tr key={student._id} className="hover:bg-gray-50/50 transition-colors group">
                                 <td className="py-4 px-6">
-                                    <div className="font-bold text-gray-900">{student.name}</div>
+                                    <div className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors cursor-pointer" onClick={() => navigate(`/admin/student/${student._id}`)}>{student.name}</div>
                                     <div className="text-xs text-gray-500">{student.email}</div>
                                 </td>
                                 <td className="py-4 px-6">

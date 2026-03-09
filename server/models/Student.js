@@ -28,7 +28,16 @@ const studentSchema = mongoose.Schema({
   twelfthPercentage: Number,
   diplomaPercentage: Number,
   resumeLink: String,
+  linkedinLink: String,
   skills: [String],
+  certificates: [{
+    name: String,
+    link: String
+  }],
+  hackathons: [{
+    name: String,
+    link: String
+  }],
   isVerified: {
       type: Boolean,
       default: false // Admin needs to verify student

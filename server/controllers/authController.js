@@ -29,6 +29,7 @@ const authUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: role,
+      createdAt: user.createdAt,
       token: generateToken(user._id, role),
     };
 
@@ -36,9 +37,16 @@ const authUser = asyncHandler(async (req, res) => {
         response.profile = {
             department: user.department,
             year: user.year,
+            mobile: user.mobile,
             cgpa: user.cgpa,
+            tenthPercentage: user.tenthPercentage,
+            twelfthPercentage: user.twelfthPercentage,
+            diplomaPercentage: user.diplomaPercentage,
             resumeLink: user.resumeLink,
+            linkedinLink: user.linkedinLink,
             skills: user.skills,
+            certificates: user.certificates,
+            hackathons: user.hackathons,
             isVerified: user.isVerified
         };
     }
@@ -86,6 +94,7 @@ const registerUser = asyncHandler(async (req, res) => {
         name: user.name,
         email: user.email,
         role: role || 'student',
+        createdAt: user.createdAt,
         token: generateToken(user._id, role || 'student'),
       });
     } else {

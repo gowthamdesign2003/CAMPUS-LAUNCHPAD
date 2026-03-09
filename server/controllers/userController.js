@@ -352,6 +352,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      createdAt: user.createdAt,
     };
 
     if (user.role === 'student') {
@@ -364,7 +365,10 @@ const getUserProfile = asyncHandler(async (req, res) => {
             twelfthPercentage: user.twelfthPercentage,
             diplomaPercentage: user.diplomaPercentage,
             resumeLink: user.resumeLink,
+            linkedinLink: user.linkedinLink,
             skills: user.skills,
+            certificates: user.certificates,
+            hackathons: user.hackathons,
             isVerified: user.isVerified
         };
     }
@@ -402,6 +406,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             if (profileData.twelfthPercentage !== undefined) user.twelfthPercentage = profileData.twelfthPercentage;
             if (profileData.diplomaPercentage !== undefined) user.diplomaPercentage = profileData.diplomaPercentage;
             if (profileData.resumeLink !== undefined) user.resumeLink = profileData.resumeLink;
+            if (profileData.linkedinLink !== undefined) user.linkedinLink = profileData.linkedinLink;
             
             // Handle skills (could be array or JSON string)
             if (profileData.skills !== undefined) {
@@ -413,6 +418,32 @@ const updateUserProfile = asyncHandler(async (req, res) => {
                     }
                 } else {
                     user.skills = profileData.skills;
+                }
+            }
+
+            // Handle certificates
+            if (profileData.certificates !== undefined) {
+                if (typeof profileData.certificates === 'string') {
+                    try {
+                        user.certificates = JSON.parse(profileData.certificates);
+                    } catch (e) {
+                        console.error("Error parsing certificates:", e);
+                    }
+                } else {
+                    user.certificates = profileData.certificates;
+                }
+            }
+
+            // Handle hackathons
+            if (profileData.hackathons !== undefined) {
+                if (typeof profileData.hackathons === 'string') {
+                    try {
+                        user.hackathons = JSON.parse(profileData.hackathons);
+                    } catch (e) {
+                        console.error("Error parsing hackathons:", e);
+                    }
+                } else {
+                    user.hackathons = profileData.hackathons;
                 }
             }
 
@@ -429,6 +460,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
             name: updatedUser.name,
             email: updatedUser.email,
             role: updatedUser.role,
+            createdAt: updatedUser.createdAt,
         };
 
         if (updatedUser.role === 'student') {
@@ -441,7 +473,10 @@ const updateUserProfile = asyncHandler(async (req, res) => {
                 twelfthPercentage: updatedUser.twelfthPercentage,
                 diplomaPercentage: updatedUser.diplomaPercentage,
                 resumeLink: updatedUser.resumeLink,
+                linkedinLink: updatedUser.linkedinLink,
                 skills: updatedUser.skills,
+                certificates: updatedUser.certificates,
+                hackathons: updatedUser.hackathons,
                 isVerified: updatedUser.isVerified
             };
         }
@@ -533,6 +568,41 @@ const getStudentPlacementStatus = asyncHandler(async (req, res) => {
     res.json(students);
 });
 
+// @desc    Get single student profile (Admin only)
+// @route   GET /api/users/:id
+// @access  Private/Admin
+const getStudentProfileById = asyncHandler(async (req, res) => {
+    const student = await Student.findById(req.params.id);
+
+    if (student && student.role === 'student') {
+        res.json({
+            _id: student._id,
+            name: student.name,
+            email: student.email,
+            role: student.role,
+            createdAt: student.createdAt,
+            profile: {
+                department: student.department,
+                year: student.year,
+                mobile: student.mobile,
+                cgpa: student.cgpa,
+                tenthPercentage: student.tenthPercentage,
+                twelfthPercentage: student.twelfthPercentage,
+                diplomaPercentage: student.diplomaPercentage,
+                resumeLink: student.resumeLink,
+                linkedinLink: student.linkedinLink,
+                skills: student.skills,
+                certificates: student.certificates,
+                hackathons: student.hackathons,
+                isVerified: student.isVerified
+            }
+        });
+    } else {
+        res.status(404);
+        throw new Error('Student not found');
+    }
+});
+
 // @desc    Get career path recommendations
 // @route   GET /api/users/recommendations
 // @access  Private/Student
@@ -598,4 +668,4 @@ const getCareerRoadmap = asyncHandler(async (req, res) => {
     }
 });
 
-export { getUserProfile, updateUserProfile, getUsers, getStudentPlacementStatus, getCareerRecommendations, getCareerRoadmap };
+export { getUserProfile, updateUserProfile, getUsers, getStudentPlacementStatus, getStudentProfileById, getCareerRecommendations, getCareerRoadmap };

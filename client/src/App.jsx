@@ -17,6 +17,7 @@ import MyApplications from './pages/MyApplications';
 import JobApplications from './pages/JobApplications';
 import ResumeAnalyzer from './pages/ResumeAnalyzer';
 import StudentStatus from './pages/StudentStatus';
+import StudentProfileView from './pages/StudentProfileView';
 import CareerPath from './pages/CareerPath';
 import LearningRoadmap from './pages/LearningRoadmap';
 import InterviewSchedule from './pages/InterviewSchedule';
@@ -145,6 +146,12 @@ const App = () => {
               <Route path="/admin/student-status" element={
                 <PrivateRoute roles={['admin']}>
                   <StudentStatus />
+                </PrivateRoute>
+              } />
+
+              <Route path="/admin/student/:id" element={
+                <PrivateRoute roles={['admin']}>
+                  <StudentProfileView />
                 </PrivateRoute>
               } />
 

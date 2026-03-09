@@ -270,36 +270,52 @@ const PostJob = () => {
                   <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-2">
                       <List size={20} className="text-orange-600" /> Interview Process
                   </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                      <input 
-                          type="text" 
-                          placeholder="Round Name (e.g. Aptitude)"
-                          value={roundInput.roundName}
-                          onChange={(e) => setRoundInput({...roundInput, roundName: e.target.value})}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                      />
-                      <input 
-                          type="date" 
-                          value={roundInput.date}
-                          onChange={(e) => setRoundInput({...roundInput, date: e.target.value})}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                      />
-                      <input
-                          type="url"
-                          value={roundInput.link}
-                          onChange={(e) => setRoundInput({ ...roundInput, link: e.target.value })}
-                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
-                          placeholder="Meet Link (optional)"
-                      />
-                      <div className="flex gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200 items-end">
+                      <div className="md:col-span-1">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Round Name</label>
+                          <input 
+                              type="text" 
+                              placeholder="e.g. Aptitude"
+                              value={roundInput.roundName}
+                              onChange={(e) => setRoundInput({...roundInput, roundName: e.target.value})}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black bg-white text-sm"
+                          />
+                      </div>
+                      <div className="md:col-span-1">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                          <input 
+                              type="date" 
+                              value={roundInput.date}
+                              onChange={(e) => setRoundInput({...roundInput, date: e.target.value})}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black bg-white text-sm"
+                          />
+                      </div>
+                      <div className="md:col-span-1">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Meet Link</label>
+                          <input
+                              type="url"
+                              value={roundInput.link}
+                              onChange={(e) => setRoundInput({ ...roundInput, link: e.target.value })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black bg-white text-sm"
+                              placeholder="Optional link"
+                          />
+                      </div>
+                      <div className="md:col-span-1">
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Time</label>
                           <input 
                               type="time" 
                               value={roundInput.time}
                               onChange={(e) => setRoundInput({...roundInput, time: e.target.value})}
-                              className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black bg-white text-sm"
                           />
-                          <button type="button" onClick={handleAddRound} className="bg-black text-white px-4 py-2 rounded-lg font-bold">Add</button>
                       </div>
+                      <button 
+                          type="button" 
+                          onClick={handleAddRound} 
+                          className="md:col-span-1 bg-black text-white px-4 py-2 rounded-lg font-bold h-[38px] hover:bg-gray-800 transition-colors"
+                      >
+                          Add
+                      </button>
                   </div>
                   
                   <div className="space-y-2">
