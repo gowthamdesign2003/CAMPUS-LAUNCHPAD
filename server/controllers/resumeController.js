@@ -257,11 +257,11 @@ const analyzeText = (text) => {
     if (score < 20) score = 20;
 
     // Derived metrics
-    const keywordMatchPercent = Math.round((presentKeywords.length / industryKeywords.length) * 100);
-    const sectionCompletionRate = Math.round((Object.values(sectionPresence).filter(Boolean).length / Object.keys(sectionPresence).length) * 100);
+    let keywordMatchPercent = Math.round((presentKeywords.length / industryKeywords.length) * 100);
+    let sectionCompletionRate = Math.round((Object.values(sectionPresence).filter(Boolean).length / Object.keys(sectionPresence).length) * 100);
     // Simple readability index mapped from average words per sentence (ideal ≈ 12–20 words)
     const readabilityBase = 100 - Math.max(0, Math.abs(avgWordsPerSentence - 16) * 5);
-    const readabilityIndex = Math.max(30, Math.min(100, Math.round(readabilityBase)));
+    let readabilityIndex = Math.max(30, Math.min(100, Math.round(readabilityBase)));
 
     const subscores = {
         sections: Math.round(sectionsScore),
