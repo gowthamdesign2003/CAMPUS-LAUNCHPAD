@@ -11,3 +11,7 @@ A comprehensive platform for campus recruitment and placement management.
 ## Tech Stack
 - Frontend: React, Tailwind CSS
 - Backend: Node.js, Express, MongoDB
+
+## Setup
+- cd server, npm install, npm run dev
+- cd client, npm install, npm run dev
